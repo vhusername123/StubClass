@@ -1,4 +1,4 @@
-import type { AnyFunctions } from "../AnyFunctions.ts";
+import type { AnyFunctions } from "./AnyFunctions.ts";
 
 export type FilterAndMapMethodsToUnknown<T> = {
   [

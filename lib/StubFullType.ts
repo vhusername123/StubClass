@@ -1,33 +1,45 @@
-import { Stub } from "./types/Stub.ts";
-import { FilterAndMapMethodsToUnknown } from "./types/FilterAndMapMethodsToUnknown.ts";
+import type { Stub } from "./types/Stub.ts";
+import type { FilterAndMapMethodsToUnknown } from "./types/FilterAndMapMethodsToUnknown.ts";
+import type { Stubbed } from "./types/Stubbed.ts";
+import type { MethodKeys } from "./types/MethodKeys.ts";
+import type { AnyFunctions } from "./types/AnyFunctions.ts";
 
-export abstract class StubFullType<T> {
+export class StubFullType<T> implements Stubbed<T> {
   public get stub(): Stub<T> {
-    return { ...this._stub };
+    return JSON.parse(JSON.stringify(this._stub));
   }
-
+  get this(): T {
+    return this as unknown as T;
+  }
   protected constructor(
-    private readonly _methodNames: (keyof FilterAndMapMethodsToUnknown<T>)[] = [],
+    private readonly _methodNames: (MethodKeys<T>)[] = [],
     private readonly _stub: Stub<T> = {} as Stub<T>,
   ) {
     _methodNames.forEach((e) => this.initializeStub(e));
   }
-
-  protected initializeStub<K extends keyof FilterAndMapMethodsToUnknown<T>>(
+  protected static _create<T>(
+    methodNames?: (keyof FilterAndMapMethodsToUnknown<T>)[],
+  ): Stubbed<T> {
+    return new StubFullType(methodNames);
+  }
+  protected initializeStub<K extends MethodKeys<T>>(
     key: K,
-    fn?: (...args: unknown[]) => unknown,
+    fn?: AnyFunctions,
   ) {
     this._stub[key] = this.createInitialState<K>();
+    this.overwriteMethod(key, fn);
+  }
+
+  overwriteMethod<K extends MethodKeys<T>>(
+    key: K,
+    fn?: AnyFunctions,
+  ): void {
     this[key] = fn as this[K] ?? ((...args: unknown[]) => {
       return this.fakeProcess(args, key);
     }) as this[K];
   }
 
-  static create<StaticT>(): StaticT & StubFullType<never> {
-    return new StubFullType() as StaticT & StubFullType<never>;
-  }
-
-  private createInitialState<K extends keyof T>(): Stub<T>[K] {
+  private createInitialState<K extends MethodKeys<T>>(): Stub<T>[K] {
     return {
       counter: 0,
       outputs: [],
@@ -35,6 +47,7 @@ export abstract class StubFullType<T> {
       permanent: false,
     } as unknown as Stub<T>[K];
   }
+
   reset(trueReset = false) {
     Object.keys(this._stub).forEach((key) => {
       const f = key as keyof T;
@@ -44,21 +57,25 @@ export abstract class StubFullType<T> {
       this._stub[f] = this.createInitialState();
     });
   }
-  registerOutput<K extends keyof T>(
+
+  registerOutput<K extends MethodKeys<T>, O>(
     key: K,
-    output: unknown,
+    output: O,
     permanent = false,
   ) {
     const stub = this._stub[key] as Stub<T>[K];
     stub.outputs.push(output);
     this._stub[key].permanent = permanent;
   }
+
   counter(key: keyof T): number {
     return this._stub[key].counter ?? 0;
   }
+
   lastArgs<K extends keyof T>(key: K): unknown[] {
-    return this._stub[key].args[this._stub[key].counter - 1];
+    return [...this._stub[key].args[this._stub[key].counter - 1]];
   }
+
   private nextOutput(
     key: keyof T,
   ): unknown {
@@ -66,6 +83,7 @@ export abstract class StubFullType<T> {
       ? this._stub[key].outputs[0]
       : this._stub[key].outputs.shift();
   }
+
   private incrementCounter(key: keyof T) {
     this._stub[key].counter = (this._stub[key].counter) + 1;
   }
