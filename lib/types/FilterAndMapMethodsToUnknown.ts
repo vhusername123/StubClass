@@ -1,7 +1,8 @@
+import type { AnyFunctions } from "../AnyFunctions.ts";
+
 export type FilterAndMapMethodsToUnknown<T> = {
   [
-    // deno-lint-ignore no-explicit-any
-    K in keyof T as T[K] extends (...args: any[]) => any ? K
+    K in keyof T as T[K] extends AnyFunctions ? K
       : never
   ]: (
     ...args: unknown[]
