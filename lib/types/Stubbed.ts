@@ -5,9 +5,9 @@ export interface Stubbed<T> {
   readonly stub: Stub<T>;
   readonly this: T;
   reset(trueReset?: true): void;
-  registerOutput<K extends MethodKeys<T>>(
+  registerOutput<K extends MethodKeys<T>, O>(
     key: K,
-    output: unknown,
+    output?: O,
     permanent?: true,
   ): void;
   counter(key: MethodKeys<T>): number;

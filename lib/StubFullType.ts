@@ -60,7 +60,7 @@ export class StubFullType<T> implements Stubbed<T> {
 
   registerOutput<K extends MethodKeys<T>, O>(
     key: K,
-    output: O,
+    output?: O,
     permanent = false,
   ) {
     const stub = this._stub[key] as Stub<T>[K];
