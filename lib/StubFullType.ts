@@ -6,7 +6,19 @@ import type { AnyFunctions } from "./types/AnyFunctions.ts";
 
 export class StubFullType<T> implements Stubbed<T> {
   public get stub(): Stub<T> {
-    return this._stub;
+    return Object.fromEntries(
+      Object.entries(this._stub).map(([key, value]) => {
+        const stubValue = value as Stub<T>[keyof T];
+        return [
+          key,
+          {
+            ...stubValue,
+            args: [...stubValue.args],
+            outputs: [...stubValue.outputs],
+          },
+        ];
+      }),
+    ) as Stub<T>;
   }
   get this(): T {
     return this as unknown as T;

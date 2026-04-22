@@ -19,7 +19,9 @@ type TestType2 = {
 type TestType3 = {
   a: () => void;
 };
-
+type TestType4 = {
+  passThrough<T>(_: T): T;
+};
 class StubbedTestTypeWithCreateStatic extends StubFullType<TestType> {
   static create<
     T extends FilterAndMapMethodsToUnknown<TestType> =
@@ -44,6 +46,11 @@ class StubbedTest2TypeWithConstructor extends StubFullType<TestType2> {
     return new StubbedTest2TypeWithConstructor();
   }
 }
+class StubbedTestType4 extends StubFullType<TestType4> {
+  constructor() {
+    super(["passThrough"]);
+  }
+}
 class MyTestError extends Error {
   constructor(msg: string) {
     super(msg);
@@ -54,7 +61,7 @@ Deno.test("StubFullType", async (t) => {
   const testObject: Stubbed<TestType> = StubbedTestTypeWithCreateStatic
       .create(),
     testObject2 = StubbedTest2TypeWithConstructor.create();
-  await t.step("get stub returns the complete and copied object", () => {
+  await t.step("get stub returns a copy of the stub catalog", () => {
     const stub = testObject.stub;
     assertEquals(stub, testObject.stub);
     stub.b.args.push(["a"]);
@@ -129,12 +136,33 @@ Deno.test("StubFullType", async (t) => {
     const testCThis: TestType3 = testObject2.c.this;
     assertEquals(testCThis, testC as unknown);
   });
+  await t.step(
+    "objects dont get altered while passing through stub catalog",
+    () => {
+      const stubbedTestType4 = new StubbedTestType4();
+      const data = new DataObject();
+      stubbedTestType4.registerOutput("passThrough", data);
+      const returned = dependentOnObject(stubbedTestType4.this);
+      assertEquals(returned, data);
+      assertEquals(stubbedTestType4.stub["passThrough"].args[0], [data]);
+    },
+  );
 });
-
+function dependentOnObject(testObject: TestType4) {
+  const data = new DataObject();
+  return testObject.passThrough(data);
+}
 function dependentOnTestType(testObject: TestType) {
   testObject.b(testObject.a("hello"));
   testObject.b(testObject.a("hello"));
   testObject.b(testObject.a("hello"));
   testObject.b(testObject.a("hello"));
   return testObject.a("hello");
+}
+
+class DataObject implements TestType4 {
+  constructor() {}
+  passThrough<T>(_: T): T {
+    return _;
+  }
 }
