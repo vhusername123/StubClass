@@ -6,7 +6,7 @@ import type { AnyFunctions } from "./types/AnyFunctions.ts";
 
 export class StubFullType<T> implements Stubbed<T> {
   public get stub(): Stub<T> {
-    return JSON.parse(JSON.stringify(this._stub));
+    return this._stub;
   }
   get this(): T {
     return this as unknown as T;
@@ -15,7 +15,7 @@ export class StubFullType<T> implements Stubbed<T> {
     private readonly _methodNames: (MethodKeys<T>)[] = [],
     private readonly _stub: Stub<T> = {} as Stub<T>,
   ) {
-    _methodNames.forEach((e) => this.initializeStub(e));
+    this._methodNames.forEach((e) => this.initializeStub(e));
   }
   protected static _create<T>(
     methodNames?: (keyof FilterAndMapMethodsToUnknown<T>)[],
